@@ -83,10 +83,10 @@ connect-sb: ## Connect as sandbox profiler user
 
 # Development and Testing
 .PHONY: seed
-seed: ## Load demo data for testing (to be implemented)
-	@echo "🌱 Seeding demo data..."
-	@echo "TODO: Implement demo data seeding"
-	# docker exec -i $(POSTGRES_CONTAINER) psql -U postgres -d optidb < seed.sql
+seed: ## Load demo data with performance problems
+	@echo "🌱 Seeding demo data with intentional performance issues..."
+	docker exec -i -e PGPASSWORD=postgres $(POSTGRES_CONTAINER) psql -U postgres -d optidb < seed.sql
+	@echo "✅ Demo data loaded with slow queries executed"
 
 .PHONY: scan
 scan: ## Run query statistics scan (requires OptiDB CLI)
