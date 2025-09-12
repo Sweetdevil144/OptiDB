@@ -84,7 +84,7 @@ simulations(id, query_id, rec_id, before_ms, after_ms, improvement_pct, before_p
 
 **Goal**: end-to-end scan to surfaced recs (raw but working).
 
-| Time   | Person A (Data/Rules/DB)                                                                                                                                             | Person B (API/UI/CLI)                                                                         |
+| Time   | Abhi (Data/Rules/DB)                                                                                                                                             | Dev (API/UI/CLI)                                                                         |
 | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | 0–2h   | `docker-compose` Postgres 16; enable `pg_stat_statements`, `auto_explain`, `hypopg`; create roles (`profiler_ro`, `profiler_sb`).                                    | Scaffold Fiber + Cobra; env/config; pgx pool; basic health endpoint.                          |
 | 2–5h   | Seed schema (`users/orders/order_items/events`) + intentional slow queries (seq scans, bad joins, correlated subqueries).                                            | CLI: `init`, `scan`, `bottlenecks`. Wire `scan` to call API.                                  |
