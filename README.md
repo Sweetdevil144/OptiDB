@@ -1,64 +1,39 @@
 # OptiDB
 
-**Ship**: ingest → analyze (rules + light ML) → recommend (DDL + rewrite hints) → **simulate** (before/after) → UI & CLI.
-**Wow moment**: “Run Simulation” shows **−70–95%** latency with plan diff (Seq → Index).
+- **DB**: PostgreSQL only (first-class).
+- **Core**: ingest stats + plans, detect bottlenecks (rules + light ML), generate **actionable DDL/rewrite**, plain-English “why”.
+- **Stretch**: **Impact Simulator** (hypopg + EXPLAIN ANALYZE), **grounded Q\&A** (templated, non-hallucinated).
+- **UI**: server-rendered (Fiber + HTMX) for speed; no SPA yak-shaving.
+- **CLI**: Cobra for headless eval and demo scripts.
 
 ---
 
-## 🏗️ Architecture (lean)
+# 🏗️ Repo Layout (lean)
 
-- **Fiber API** (`:8080`) ←→ **Service Layer** (rules/ML) ←→ **Postgres** (target DB)
-- **SQLite** (fast meta-store) or same Postgres for profiler data
-- **Cobra CLI** for headless ops (`profiler scan/simulate`)
-- **Optional**: MCP sidecar day-2 if ahead of schedule
-
-```bash
+```
 /db-profiler
   /cmd
-    /api        # Fiber main()
-    /cli        # Cobra commands
+    /api            # Fiber main()
+    /cli            # Cobra: init/scan/bottlenecks/simulate
   /internal
-    /config     # env, flags
-    /db         # pgx pool
-    /ingest     # pg_stat_statements, plan fetch
-    /parse      # norm/fingerprint, AST (pg_query_go)
-    /features   # TF-IDF, metrics prep (gonum)
-    /rules      # heuristics (indexes, rewrites, dup idx)
-    /ml         # kmeans + MAD/IQR anomaly
-    /recommend  # DDL generator + rationale
-    /simulate   # EXPLAIN ANALYZE pre/post (+ hypopg)
-    /store      # sqlite/meta DAO
-    /http       # handlers, DTOs
-    /ui         # server-rendered templates (HTMX)  ← faster than React
-  /deploy
-    docker-compose.yml
-  /docs
-    README.md  ARCHITECTURE.md  DEMO.md
+    /config         # env, flags
+    /db             # pgx, migrations, roles, ext enable
+    /ingest         # pg_stat_statements, EXPLAIN(ANALYZE, BUFFERS)
+    /parse          # normalize + fingerprint (+ optional pg_query_go)
+    /features       # TF-IDF, rollups
+    /rules          # heuristics (index, joins, correlated, redundant, cardinality)
+    /ml             # kmeans, MAD/IQR anomalies (gonum)
+    /recommend      # DDL and rewrite synthesis + rationale strings
+    /simulate       # hypopg compare: pre/post explain, %Δ + plan diff
+    /store          # SQLite or pg meta store (DAOs)
+    /http           # handlers, DTOs, templates(HTMX)
+  /deploy           # docker-compose, seed.sql, Makefile
+  /docs             # README, ARCHITECTURE, DEMO
 ```
 
 ---
 
-## 🗄️ DB Setup (target Postgres)
-
-- Enable: `pg_stat_statements`, `auto_explain`, `hypopg` (for hypothetical index sim).
-- Seed demo schema: `users, orders, order_items, events` (biggish), plus 8–12 intentional anti-patterns.
-- Roles: `profiler_ro` (read), `profiler_sb` (sandbox schema operations).
-
----
-
-## 🧠 Heuristics (fast + explainable)
-
-1. **Missing Index**: selective predicates + seq scan on large table → `CREATE INDEX …(columns by selectivity)`
-2. **JOIN w/o Composite Index**: equi-join on (a,b) w/o covering index → composite index recommendation
-3. **Correlated Subquery** → `JOIN`/`EXISTS` rewrite suggestion
-4. **Redundant/Covered Index**: `(a,b)` exists; unused `(a)` → drop hint
-5. **Cardinality Skew**: |act−est|/est > K → `ANALYZE`, `ALTER TABLE … SET STATISTICS`, or expression index
-
-**ML light**: TF-IDF + **K-Means** for query families; **MAD/IQR** anomalies per family.
-
----
-
-## 📑 Profiler Meta Schema (SQLite or Postgres)
+# 🗄️ Meta Schema (SQLite or Postgres)
 
 ```sql
 queries(id, fingerprint, raw_sql, norm_sql, first_seen, last_seen)
@@ -67,155 +42,137 @@ plans(query_id, plan_json, had_seq_scan, est_rows, act_rows, buffers, captured_a
 schema_tables(table_name, rows_est, bytes)
 schema_indexes(index_name, table_name, cols, unique, used, covers)
 recommendations(id, query_id, type, ddl, rationale, confidence, created_at)
-simulations(id, query_id, rec_id, before_ms, after_ms, before_plan, after_plan, improvement_pct, ran_at)
+simulations(id, query_id, rec_id, before_ms, after_ms, improvement_pct, before_plan, after_plan, ran_at)
 ```
 
 ---
 
-## 🌐 API (Fiber)
+# 🧠 Detection & Recs (explainable, fast)
 
-- `GET  /bottlenecks?limit=10` → list (reason, evidence, DDL)
-- `GET  /queries/:id` → sql, metrics, plan facts, cluster, anomaly
-- `GET  /recommendations?query_id=…`
-- `POST /simulate` `{query_id, rec_id, mode:"hypopg|real"}` → % improvement + plan diff
-- `POST /chat` `{question, query_id?}` → grounded answer (no hallucinations; template on your own facts)
+- **Missing Index**: selective WHERE + seq scan on big table → `CREATE INDEX …` (column order by selectivity/usage).
+- **JOIN w/o Composite Index**: equi-join on (a,b) lacking covering index → suggest composite index.
+- **Correlated Subquery**: detect via AST/patterns → advise `JOIN`/`EXISTS` rewrite (show skeleton).
+- **Redundant/Covered Index**: (a,b) exists & (a) unused → drop hint (flag “validate in staging”).
+- **Cardinality Mismatch**: |act−est|/max(est,1) > K → `ANALYZE`, raise stats target, or expression index.
 
-**UI**: server-rendered pages (Fiber + HTMX): Dashboard, Query Detail (with **Run Simulation** button).
+**ML-light**: TF-IDF on normalized SQL + **K-Means** for “query families”; per-family **MAD/IQR** anomaly tags.
 
 ---
 
-## 🧰 CLI (Cobra)
+# 🌐 API (Fiber) + CLI (Cobra)
 
-- `profiler init` (enable extensions, seed demo)
+**Endpoints**
+
+- `GET  /bottlenecks?limit=10`
+- `GET  /queries/:id` (sql, metrics, plan facts, family, anomalies)
+- `GET  /recommendations?query_id=…`
+- `POST /simulate` `{query_id, rec_id, mode:"hypopg|real"}` → %Δ + plan diff
+- `POST /chat` `{question, query_id?}` → grounded (templates from your data; LLM optional)
+
+**CLI**
+
+- `profiler init` (enable extensions, create roles/meta, seed demo)
 - `profiler scan --top 100 --min-mean-ms 5`
 - `profiler bottlenecks --top 10`
 - `profiler simulate --query <id> --rec <id> --mode hypopg`
 
 ---
 
-# 📆 3-Day Plan (Asia/Kolkata)
+# 📆 72-Hour Plan (IST) — **Two-Person Tag Team**
 
-### Day 1 — Core Ingest → Rules → API/CLI (0–24h)
+### Day 1 — Ingest → Rules → API/CLI → Minimal UI
 
-**0–2h**
+**Goal**: end-to-end scan to surfaced recs (raw but working).
 
-- Repo scaffold; wire **Fiber** + **Cobra**; env/config; `pgx` pool.
-- `docker-compose`: Postgres with extensions.
+| Time   | Person A (Data/Rules/DB)                                                                                                                                             | Person B (API/UI/CLI)                                                                         |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 0–2h   | `docker-compose` Postgres 16; enable `pg_stat_statements`, `auto_explain`, `hypopg`; create roles (`profiler_ro`, `profiler_sb`).                                    | Scaffold Fiber + Cobra; env/config; pgx pool; basic health endpoint.                          |
+| 2–5h   | Seed schema (`users/orders/order_items/events`) + intentional slow queries (seq scans, bad joins, correlated subqueries).                                            | CLI: `init`, `scan`, `bottlenecks`. Wire `scan` to call API.                                  |
+| 5–9h   | `/ingest`: pull `pg_stat_statements`; join with `pg_class`, `pg_index`; persist to meta store.                                                                       | `/http`: `GET /bottlenecks`, `GET /queries/:id`; server-rendered dashboard (HTMX) with top N. |
+| 9–14h  | `/parse`: normalize & fingerprint; optional AST via `pg_query_go` (skip if short on time).                                                                           | DTOs for bottlenecks, query detail; simple plan facts chips (Seq/Index, est vs act).          |
+| 14–20h | `/rules v1`: missing index, composite join index, correlated subquery (regex or AST), redundant index, cardinality skew; `/recommend`: DDL + rationale + confidence. | Wire rules to UI + CLI output; table of recs with “Why / DDL / Risk” columns.                 |
+| 20–24h | Smoke pass on seeded data; adjust thresholds.                                                                                                                        | CLI demo script `scan→bottlenecks`. Minimal README.                                           |
 
-**2–6h**
-
-- Seed demo schema + synthetic workload (anti-patterns).
-- Implement **ingest**: pull from `pg_stat_statements`, enrich with table/index stats.
-
-**6–10h**
-
-- **parse**: normalize SQL (strip literals), fingerprint; optional AST via `pg_query_go`.
-- Store to meta DB; first dashboards (server-render tables).
-
-**10–16h**
-
-- **rules v1**: missing index, composite join index, correlated subquery, redundant index.
-- **recommend**: DDL + rationale (plain English) + confidence.
-
-**16–20h**
-
-- **API**: `/bottlenecks`, `/queries/:id`, `/recommendations`.
-- **CLI**: `scan`, `bottlenecks`.
-
-**20–24h**
-
-- Smoke demo: list top 10 bottlenecks with DDL.
-  **Deliver**: Ingest → Rules → REST + CLI ✅
+**EOD D1 Deliverable**: Scan → detect → recommend visible in UI/CLI ✅
 
 ---
 
-### Day 2 — ML Light → Simulator → UI Polish (24–48h)
+### Day 2 — Features/ML → **Simulator** → UI Polish
 
-**24–30h**
+**Goal**: cluster/anomaly context + **impact simulator** WOW.
 
-- **features**: TF-IDF vectors; **K-Means**; label clusters; anomaly via **MAD/IQR**.
-- Surface cluster & anomaly in API/UI.
+| Time   | Person A (Simulator & Tests)                                                                                                                            | Person B (Features/ML & UI)                                                                                        |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 24–30h | `/simulate`: baseline `EXPLAIN (ANALYZE, BUFFERS)` capture.                                                                                             | `/features`: TF-IDF; `/ml`: **K-Means** families; label via table/verb bigrams.                                    |
+| 30–38h | Add **hypopg**: `hypopg_create_index('CREATE INDEX …')` → re-EXPLAIN → compute `improvement_pct`; capture node diffs (Seq→Index). Cleanup hypopg state. | Per-family **MAD/IQR** anomalies; expose tags in `/queries/:id` + `/bottlenecks`.                                  |
+| 38–44h | Guards: timeouts, concurrency caps, rollback on errors; unit tests for rules + simulate.                                                                | UI polish: Before/After cards with %Δ badge; plan snippet diff (node type change badges); confidence & risk notes. |
+| 44–48h | Add optional `mode:"real"` on **sandbox schema** (not default).                                                                                         | Update CLI: `simulate` command; improve table formatting.                                                          |
 
-**30–40h**
-
-- **simulate** (killer feature):
-
-  - Baseline `EXPLAIN (ANALYZE, BUFFERS)`
-  - `hypopg_create_index('CREATE INDEX …')`
-  - Re-EXPLAIN; compute `%Δ` & node diffs; cleanup.
-
-**40–44h**
-
-- **UI polish**: before/after cards, badges (Seq→Index), confidence, risk notes.
-
-**44–48h**
-
-- Docs v1 (README quick-start, DEMO script).
-  **Deliver**: Clustering + anomalies + **Impact Simulator** + polished UI ✅
+**EOD D2 Deliverable**: **Impact Simulator** live + families/anomalies in UI ✅
 
 ---
 
-### Day 3 — Grounded Q\&A → Hardening → Demo (48–72h)
+### Day 3 — Grounded Q\&A → Hardening → Judge Demo
 
-**48–56h**
+**Goal**: explain like a human, be robust, ship docs + scripted demo.
 
-- **/chat** grounded answers: pull facts (metrics, plan, rec) → template response; (LLM optional).
-- Q’s: “Why is Query X slow?”, “What index to add?”, “Show impact”.
+| Time   | Person A (Ops Hardening)                                                                                                    | Person B (Grounded Q\&A & Docs)                                                                                                                   |
+| ------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 48–54h | Cache schema/stat calls (2–5 min); add `pg_locks` summary and “contention suspected” label; EXPLAIN timeouts + rate limits. | `/chat`: template-grounded answers: pulls query metrics, plan facts, and recommended DDL; returns cited explanation (no hallucinations required). |
+| 54–66h | Finalize Make targets: `up/init/seed/scan/demo/test`; stabilize thresholds & defaults.                                      | Docs: README (90-sec Quick Start), ARCHITECTURE (diagram + flow), DEMO (script + screenshots/GIFs).                                               |
+| 66–72h | Run full dry-run; capture screenshots; trim logs.                                                                           | Demo rehearsal: seed → scan → bottleneck → simulate → chat “Why is Query X slow?”.                                                                |
 
-**56–66h**
-
-- Hardening: rate-limit EXPLAIN, add timeouts; cache schema/stat calls 2–5 min;
-- Add `activity/locks` panel (basic `pg_locks` join) with “contention suspected” tag.
-
-**66–72h**
-
-- **Demo script** (`make demo`): seed → scan → show bottleneck → simulate (−XX%) → chat why.
-- Final screenshots for README.
-
-**Deliver**: Grounded chat + ops sanity + smooth demo ✅
+**EOD D3 Deliverable**: Grounded Q\&A + hardened ops + slick demo ✅
 
 ---
 
-## 🎯 Acceptance & Perf Targets
+# 🎯 Acceptance Targets
 
-- **Scan 100 queries** ≤ **2s** (excluding initial cold cache)
-- **Rules precision**: ≥ 80% of top recs give **>30%** sim speedup
-- **Simulator**: hypopg round-trip ≤ **1.5s** for single query
-- **UI**: first content paint ≤ **1s**, plan diff within **2s**
-
----
-
-## 🧪 Minimal Test Matrix
-
-- Missing index (single & composite) → improvement ≥ 70% on seeded cases
-- Correlated subquery → JOIN rewrite sample shown
-- Redundant index flagged correctly
-- Anomaly spike detected when mean_ms ×2 vs baseline
-- Simulator works in `hypopg` and `real` (sandbox schema)
+- **Scan 100 queries** ≤ **2s** (warm cache).
+- **Top recs precision**: ≥ **80%** show **>30%** simulated speedup.
+- **Simulator** (hypopg): **≤1.5s** round-trip per query on demo data.
+- **UI**: First content paint ≤ **1s**; plan diff visible ≤ **2s**.
+- **Q\&A**: 100% grounded from stored facts (no external guessing).
 
 ---
 
-## 🛡️ Risk Trims (use if behind)
+# 🧪 Test Matrix (minimum)
 
-- Skip AST; rely on plan + regex for correlated subquery (Day 1).
-- Defer anomalies; keep only K-Means OR just rules.
-- Keep UI server-rendered (no SPA build chain).
+- Missing index (single + composite) → ≥70% speedup on seeded cases.
+- JOIN covering index suggestion appears only when absent.
+- Correlated subquery flagged and rewrite sketch rendered.
+- Redundant index flagged only when covered + unused.
+- Anomaly triggers when mean_ms doubles vs baseline.
+- Simulator cleans up hypopg state reliably; respects timeouts.
 
 ---
 
-## ⚙️ Makefile Targets (speed)
+# 🛡️ If You Slip (pre-approved trims)
+
+- Skip AST day-1; use plan + regex for correlated subquery; add AST later.
+- Keep anomalies simple (MAD/IQR); defer change-point/seasonality.
+- Server-rendered UI only; no React/D3; plain HTMX + badges.
+
+---
+
+# 🔌 Makefile (speed)
 
 ```
-make up          # docker compose up -d
-make seed        # create schema + demo data
-make scan        # cobra scan
-make demo        # seed->scan->open browser
-make test        # unit tests for rules/simulate
+make up         # docker compose up -d
+make init       # create roles, enable extensions, meta store
+make seed       # demo schema + slow workloads
+make scan       # ingest stats + plans
+make demo       # seed -> scan -> open UI
+make test       # rules + simulate
 ```
 
 ---
 
-## 🔌 Optional (Only if ahead): MCP Sidecar
+# 🧾 Demo Script (judge-proof)
 
-- Slot MCP calls for `explain_analyze`, `pg_stat_*`, `simulate_index` to stream results & cache centrally.
-- Not required to win; nice bonus if time permits.
+1. `make demo` → Dashboard lists **Top Bottlenecks**.
+2. Click one → **Why** (plain English) + **DDL**.
+3. Hit **Run Simulation** → show **−XX%** latency; badge “Seq Scan → Index Scan”.
+4. Ask **“Why is Query 12 slow?”** in Q\&A → grounded answer citing metrics & plan facts.
+
+This is the **battle-ready, fuck-around-free** plan that merges your two drafts into a 72-hour execution path with clean parallelization for two people and a guaranteed “wow” moment.
