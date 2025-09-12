@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: optidb_postgres
+    environment:
+      POSTGRES_DB: optidb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      # Enable extensions on startup
+      POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth-local=md5"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: >
+      postgres 
+      -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d optidb"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Optional: pgAdmin for database management during development
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: optidb_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@optidb.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - dev
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  default:
+    name: optidb_network

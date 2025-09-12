@@ -1,0 +1,34 @@
+Problem : AI-Powered Database Observability
+Context
+Databases are the backbone of modern applications, but they often become bottlenecks. A
+single slow query can make an entire dashboard crawl. Traditionally, Database
+Administrators (DBAs) manually diagnose performance issues by analyzing logs, statistics,
+and indexes,a time-consuming process.
+With AI-driven observability, we can automate this. By mining query logs, execution plans,
+and metadata, AI can detect patterns and recommend optimizations such as:
+● Adding or removing indexes
+● Rewriting queries for efficiency
+● Adjusting partitioning/sharding strategies
+This would save hours of manual work and make systems more self-healing.
+The Challenge
+Build an AI-powered Database Profiler that:
+● Ingests query logs, execution times, and metadata.
+● Identifies performance bottlenecks automatically.
+● Provides actionable recommendations for optimization.
+Deliverables
+● A system to parse query logs/statistics (can use synthetic datasets).
+● AI/ML models or heuristics to generate performance recommendations.
+● An output format: dashboard, report, or command-line interface.
+● Documentation explaining the logic and recommendations.
+Stretch Goals
+● Conversational AI assistant:
+User: “Why is query X slow?”
+System: “Because it scans a large table without an index; try adding an index on
+column Y.”
+● Automatic testing of recommendations (simulating impact).
+● Multi-DB compatibility (Postgres, MySQL, etc.).
+Evaluation Specifics
+● Accuracy and usefulness of recommendations.
+● Clarity of explanation (can non-experts understand it?).
+● Ability to handle diverse query patterns.
+● Innovation in leveraging AI for observability.
