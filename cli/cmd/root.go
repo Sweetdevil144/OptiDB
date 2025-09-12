@@ -1,6 +1,5 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -10,21 +9,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "cli",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Use:   "optidb",
+	Short: "AI-Powered Database Performance Profiler",
+	Long: `OptiDB analyzes PostgreSQL query performance and provides actionable optimization recommendations.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+Features:
+- Scan pg_stat_statements for slow queries
+- Detect missing indexes and inefficient queries  
+- Generate DDL recommendations with confidence scores
+- Analyze correlated subqueries and join patterns
+- Plain English explanations for all recommendations
+
+Examples:
+  optidb scan --min-duration 1.0 --top 20
+  optidb bottlenecks --limit 5
+  optidb serve --port 8090`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -47,5 +48,3 @@ func init() {
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-
-
