@@ -36,9 +36,9 @@
 
 #### Dev (API/UI/CLI)
 
-- [ ] CLI: `init`, `scan`, `bottlenecks` commands
-- [ ] Wire `scan` to call API endpoints
-- [ ] Basic command structure and help
+- [x] CLI: `init`, `scan`, `bottlenecks` commands
+- [x] Wire `scan` to call API endpoints
+- [x] Basic command structure and help
 
 ### 🔄 NEXT (5-9h): Ingest & API Foundation
 
