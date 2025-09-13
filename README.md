@@ -8,9 +8,9 @@
 
 ---
 
-# 🏗️ Repo Layout (lean)
+## 🏗️ Repo Layout (lean)
 
-```
+```bash
 /db-profiler
   /cmd
     /api            # Fiber main()
@@ -33,7 +33,7 @@
 
 ---
 
-# 🗄️ Meta Schema (SQLite or Postgres)
+## 🗄️ Meta Schema (SQLite or Postgres)
 
 ```sql
 queries(id, fingerprint, raw_sql, norm_sql, first_seen, last_seen)
@@ -47,7 +47,7 @@ simulations(id, query_id, rec_id, before_ms, after_ms, improvement_pct, before_p
 
 ---
 
-# 🧠 Detection & Recs (explainable, fast)
+## 🧠 Detection & Recs (explainable, fast)
 
 - **Missing Index**: selective WHERE + seq scan on big table → `CREATE INDEX …` (column order by selectivity/usage).
 - **JOIN w/o Composite Index**: equi-join on (a,b) lacking covering index → suggest composite index.
@@ -59,9 +59,9 @@ simulations(id, query_id, rec_id, before_ms, after_ms, improvement_pct, before_p
 
 ---
 
-# 🌐 API (Fiber) + CLI (Cobra)
+## 🌐 API (Fiber) + CLI (Cobra)
 
-**Endpoints**
+### **Endpoints**
 
 - `GET  /bottlenecks?limit=10`
 - `GET  /queries/:id` (sql, metrics, plan facts, family, anomalies)
@@ -69,7 +69,7 @@ simulations(id, query_id, rec_id, before_ms, after_ms, improvement_pct, before_p
 - `POST /simulate` `{query_id, rec_id, mode:"hypopg|real"}` → %Δ + plan diff
 - `POST /chat` `{question, query_id?}` → grounded (templates from your data; LLM optional)
 
-**CLI**
+### **CLI**
 
 - `profiler init` (enable extensions, create roles/meta, seed demo)
 - `profiler scan --top 100 --min-mean-ms 5`
@@ -78,13 +78,13 @@ simulations(id, query_id, rec_id, before_ms, after_ms, improvement_pct, before_p
 
 ---
 
-# 📆 72-Hour Plan (IST) — **Two-Person Tag Team**
+## 📆 72-Hour Plan (IST) — **Two-Person Tag Team**
 
 ### Day 1 — Ingest → Rules → API/CLI → Minimal UI
 
 **Goal**: end-to-end scan to surfaced recs (raw but working).
 
-| Time   | Abhi (Data/Rules/DB)                                                                                                                                             | Dev (API/UI/CLI)                                                                         |
+| Time   | Abhi (Data/Rules/DB)                                                                                                                                                 | Dev (API/UI/CLI)                                                                              |
 | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | 0–2h   | `docker-compose` Postgres 16; enable `pg_stat_statements`, `auto_explain`, `hypopg`; create roles (`profiler_ro`, `profiler_sb`).                                    | Scaffold Fiber + Cobra; env/config; pgx pool; basic health endpoint.                          |
 | 2–5h   | Seed schema (`users/orders/order_items/events`) + intentional slow queries (seq scans, bad joins, correlated subqueries).                                            | CLI: `init`, `scan`, `bottlenecks`. Wire `scan` to call API.                                  |
@@ -126,7 +126,7 @@ simulations(id, query_id, rec_id, before_ms, after_ms, improvement_pct, before_p
 
 ---
 
-# 🎯 Acceptance Targets
+#### 🎯 Acceptance Targets
 
 - **Scan 100 queries** ≤ **2s** (warm cache).
 - **Top recs precision**: ≥ **80%** show **>30%** simulated speedup.
@@ -136,7 +136,7 @@ simulations(id, query_id, rec_id, before_ms, after_ms, improvement_pct, before_p
 
 ---
 
-# 🧪 Test Matrix (minimum)
+#### 🧪 Test Matrix (minimum)
 
 - Missing index (single + composite) → ≥70% speedup on seeded cases.
 - JOIN covering index suggestion appears only when absent.
@@ -147,7 +147,7 @@ simulations(id, query_id, rec_id, before_ms, after_ms, improvement_pct, before_p
 
 ---
 
-# 🛡️ If You Slip (pre-approved trims)
+#### 🛡️ If You Slip (pre-approved trims)
 
 - Skip AST day-1; use plan + regex for correlated subquery; add AST later.
 - Keep anomalies simple (MAD/IQR); defer change-point/seasonality.
@@ -155,9 +155,9 @@ simulations(id, query_id, rec_id, before_ms, after_ms, improvement_pct, before_p
 
 ---
 
-# 🔌 Makefile (speed)
+#### 🔌 Makefile (speed)
 
-```
+```bash
 make up         # docker compose up -d
 make init       # create roles, enable extensions, meta store
 make seed       # demo schema + slow workloads
@@ -168,7 +168,7 @@ make test       # rules + simulate
 
 ---
 
-# 🧾 Demo Script (judge-proof)
+#### 🧾 Demo Script (judge-proof)
 
 1. `make demo` → Dashboard lists **Top Bottlenecks**.
 2. Click one → **Why** (plain English) + **DDL**.

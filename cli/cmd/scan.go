@@ -10,6 +10,7 @@ import (
 
 	"cli/internal/db"
 	"cli/internal/ingest"
+	"cli/internal/logger"
 	"cli/internal/rules"
 )
 
@@ -40,11 +41,13 @@ func init() {
 }
 
 func runScan() {
+	logger.LogInfo("Starting database scan for performance issues")
 	fmt.Println("🔍 Scanning database for performance issues...")
 
 	// Connect to database as profiler_ro
 	database, err := db.ConnectAsProfiler()
 	if err != nil {
+		logger.LogErrorf("Failed to connect to database: %v", err)
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer database.Close()
@@ -52,15 +55,18 @@ func runScan() {
 	// Initialize components
 	collector := ingest.NewStatsCollector(database)
 	ruleEngine := rules.NewRuleEngine()
+	logger.LogInfo("Initialized stats collector and rule engine")
 
 	// Collect query statistics
 	fmt.Println("📊 Collecting query statistics...")
 	queryStats, err := collector.GetSlowQueries(minDuration)
 	if err != nil {
+		logger.LogErrorf("Failed to collect query stats: %v", err)
 		log.Fatalf("Failed to collect query stats: %v", err)
 	}
 
 	if len(queryStats) == 0 {
+		logger.LogInfof("No slow queries found with duration > %.1fms", minDuration)
 		fmt.Printf("✅ No slow queries found (duration > %.1fms)\n", minDuration)
 		return
 	}
@@ -69,11 +75,13 @@ func runScan() {
 	fmt.Println("🗄️  Collecting table and index metadata...")
 	tables, err := collector.GetTableInfo()
 	if err != nil {
+		logger.LogErrorf("Failed to collect table info: %v", err)
 		log.Fatalf("Failed to collect table info: %v", err)
 	}
 
 	indexes, err := collector.GetIndexInfo()
 	if err != nil {
+		logger.LogErrorf("Failed to collect index info: %v", err)
 		log.Fatalf("Failed to collect index info: %v", err)
 	}
 

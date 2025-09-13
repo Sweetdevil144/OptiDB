@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"cli/internal/logger"
 	"cli/internal/store"
 )
 
@@ -17,6 +18,8 @@ func NewStatsCollector(db *sql.DB) *StatsCollector {
 }
 
 func (sc *StatsCollector) GetQueryStats() ([]store.QueryStats, error) {
+	logger.LogInfo("Collecting query statistics from pg_stat_statements")
+
 	query := `
 		SELECT 
 			query,
@@ -35,6 +38,7 @@ func (sc *StatsCollector) GetQueryStats() ([]store.QueryStats, error) {
 
 	rows, err := sc.db.Query(query)
 	if err != nil {
+		logger.LogErrorf("Failed to query pg_stat_statements: %v", err)
 		return nil, fmt.Errorf("failed to query pg_stat_statements: %w", err)
 	}
 	defer rows.Close()
@@ -52,27 +56,32 @@ func (sc *StatsCollector) GetQueryStats() ([]store.QueryStats, error) {
 			&s.SharedBlksRead,
 		)
 		if err != nil {
+			logger.LogErrorf("Failed to scan query stats row: %v", err)
 			return nil, fmt.Errorf("failed to scan query stats: %w", err)
 		}
 		stats = append(stats, s)
 	}
 
+	logger.LogInfof("Collected %d query statistics records", len(stats))
 	return stats, nil
 }
 
 func (sc *StatsCollector) GetTableInfo() ([]store.TableInfo, error) {
+	logger.LogInfo("Collecting table information from pg_stat_user_tables")
+
 	query := `
 		SELECT 
 			schemaname,
-			tablename,
+			relname as tablename,
 			n_tup_ins + n_tup_upd + n_tup_del as row_count,
-			pg_total_relation_size(schemaname||'.'||tablename) as size_bytes
+			pg_total_relation_size(schemaname||'.'||relname) as size_bytes
 		FROM pg_stat_user_tables
 		ORDER BY size_bytes DESC
 	`
 
 	rows, err := sc.db.Query(query)
 	if err != nil {
+		logger.LogErrorf("Failed to query table info: %v", err)
 		return nil, fmt.Errorf("failed to query table info: %w", err)
 	}
 	defer rows.Close()
@@ -82,35 +91,49 @@ func (sc *StatsCollector) GetTableInfo() ([]store.TableInfo, error) {
 		var t store.TableInfo
 		err := rows.Scan(&t.SchemaName, &t.TableName, &t.RowCount, &t.SizeBytes)
 		if err != nil {
+			logger.LogErrorf("Failed to scan table info row: %v", err)
 			return nil, fmt.Errorf("failed to scan table info: %w", err)
 		}
 		tables = append(tables, t)
 	}
 
+	logger.LogInfof("Collected %d table info records", len(tables))
 	return tables, nil
 }
 
 func (sc *StatsCollector) GetIndexInfo() ([]store.IndexInfo, error) {
+	logger.LogInfo("Collecting index information from pg_stat_user_indexes")
+
 	query := `
 		SELECT 
-			schemaname,
-			tablename,
-			indexname,
-			string_to_array(regexp_replace(indexdef, '.*\((.*)\).*', '\1'), ', ') as columns,
-			indisunique,
-			indisprimary,
-			pg_relation_size(schemaname||'.'||indexname) as size_bytes,
-			idx_scan,
-			idx_tup_read,
-			idx_tup_fetch
-		FROM pg_stat_user_indexes
-		JOIN pg_index ON pg_stat_user_indexes.indexrelid = pg_index.indexrelid
-		JOIN pg_indexes ON pg_stat_user_indexes.indexname = pg_indexes.indexname
+			psi.schemaname,
+			psi.relname as tablename,
+			psi.indexrelname as indexname,
+			COALESCE(
+				array_to_string(
+					array(
+						SELECT pg_get_indexdef(psi.indexrelid, k + 1, true)
+						FROM generate_subscripts(pi.indkey, 1) as k
+						ORDER BY k
+					), 
+					','
+				), 
+				''
+			) as columns,
+			pi.indisunique,
+			pi.indisprimary,
+			pg_relation_size(psi.indexrelid) as size_bytes,
+			psi.idx_scan,
+			psi.idx_tup_read,
+			psi.idx_tup_fetch
+		FROM pg_stat_user_indexes psi
+		JOIN pg_index pi ON psi.indexrelid = pi.indexrelid
 		ORDER BY size_bytes DESC
 	`
 
 	rows, err := sc.db.Query(query)
 	if err != nil {
+		logger.LogErrorf("Failed to query index info: %v", err)
 		return nil, fmt.Errorf("failed to query index info: %w", err)
 	}
 	defer rows.Close()
@@ -132,11 +155,11 @@ func (sc *StatsCollector) GetIndexInfo() ([]store.IndexInfo, error) {
 			&idx.TuplesFetch,
 		)
 		if err != nil {
+			logger.LogErrorf("Failed to scan index info row: %v", err)
 			return nil, fmt.Errorf("failed to scan index info: %w", err)
 		}
 
-		// Parse column array
-		colsStr = strings.Trim(colsStr, "{}")
+		// Parse column names
 		if colsStr != "" {
 			idx.Columns = strings.Split(colsStr, ",")
 			for i, col := range idx.Columns {
@@ -144,13 +167,18 @@ func (sc *StatsCollector) GetIndexInfo() ([]store.IndexInfo, error) {
 			}
 		}
 
+		logger.LogDebugf("Found index: %s on %s.%s with columns [%s]",
+			idx.IndexName, idx.SchemaName, idx.TableName, strings.Join(idx.Columns, ", "))
 		indexes = append(indexes, idx)
 	}
 
+	logger.LogInfof("Collected %d index info records", len(indexes))
 	return indexes, nil
 }
 
 func (sc *StatsCollector) GetSlowQueries(minDurationMS float64) ([]store.QueryStats, error) {
+	logger.LogInfof("Collecting slow queries with min duration: %.2fms", minDurationMS)
+
 	query := `
 		SELECT 
 			query,
@@ -170,6 +198,7 @@ func (sc *StatsCollector) GetSlowQueries(minDurationMS float64) ([]store.QuerySt
 
 	rows, err := sc.db.Query(query, minDurationMS)
 	if err != nil {
+		logger.LogErrorf("Failed to query slow queries: %v", err)
 		return nil, fmt.Errorf("failed to query slow queries: %w", err)
 	}
 	defer rows.Close()
@@ -187,10 +216,21 @@ func (sc *StatsCollector) GetSlowQueries(minDurationMS float64) ([]store.QuerySt
 			&s.SharedBlksRead,
 		)
 		if err != nil {
+			logger.LogErrorf("Failed to scan slow query row: %v", err)
 			return nil, fmt.Errorf("failed to scan slow query: %w", err)
 		}
+		logger.LogDebugf("Found slow query: calls=%d, mean_time=%.2fms, query=%s",
+			s.Calls, s.MeanExecTime, s.Query[:min(50, len(s.Query))])
 		stats = append(stats, s)
 	}
 
+	logger.LogInfof("Collected %d slow queries", len(stats))
 	return stats, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

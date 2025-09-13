@@ -117,21 +117,30 @@
 
 - Placeholder for web server (Person B task)
 
-### Current Issues & Next Steps
+### ✅ Issues RESOLVED & Major Enhancements
 
-#### 🚨 Database Connection Issue
+#### ✅ Database Connection Issue - FIXED
 
-- CLI can't connect as `profiler_ro` role
-- **Status**: Database roles may need to be recreated
-- **Next**: Debug role creation in seed process
+- **Problem**: CLI couldn't connect as `profiler_ro` role
+- **Root Cause**: Local PostgreSQL on port 5432 intercepting connections
+- **Solution**: Stopped local PostgreSQL (`brew services stop postgresql@14`)
+- **Status**: ✅ RESOLVED - CLI connects perfectly to Docker PostgreSQL
+
+#### 🤖 AI-Powered Recommendations - IMPLEMENTED
+
+- **Azure OpenAI Integration**: Full GPT-4.1 API integration with structured prompts
+- **Smart Fallback**: Graceful degradation to heuristics when AI unavailable
+- **Production Ready**: Real API calls with token tracking and error handling
+- **Status**: ✅ LIVE - Generating intelligent recommendations with 40-95% confidence
 
 #### 📋 Ready for Integration (Person B)
 
-- All backend modules are functional and tested
-- Data models defined for API endpoints
-- Query analysis pipeline complete
-- Recommendation engine working
-- Ready for HTTP API wrapper
+- ✅ All backend modules are functional and AI-enhanced
+- ✅ Data models defined for API endpoints
+- ✅ Query analysis pipeline complete with AI integration
+- ✅ Advanced rule engine with 5 detection types
+- ✅ Comprehensive logging system for debugging
+- ✅ Ready for HTTP API wrapper
 
 ### Data Interfaces for Person B
 
@@ -162,7 +171,7 @@ func NormalizeQuery(query string) string
 
 #### Recommended API Endpoints
 
-```
+```bash
 GET /bottlenecks?limit=10          # Top slow queries with recommendations
 GET /queries/:id                   # Detailed query analysis
 GET /recommendations?query_id=X    # Recommendations for specific query
@@ -198,27 +207,40 @@ go build -o optidb
 ./optidb bottlenecks --limit 5
 ```
 
-### File Structure
+### File Structure (CLEANED UP)
 
 ```
 OptiDB/
-├── deploy/                 # Database infrastructure
-│   ├── docker-compose.yml  # Postgres 16 setup
-│   ├── seed.sql            # Demo data with slow queries
-│   ├── init/               # Database initialization
-│   └── Makefile           # Database operations
-├── cli/                   # Backend application
-│   ├── internal/          # Core modules
-│   │   ├── ingest/        # Statistics collection
-│   │   ├── parse/         # Query analysis
-│   │   ├── rules/         # Performance rules
-│   │   ├── recommend/     # Recommendation engine
-│   │   ├── store/         # Data models
-│   │   └── db/            # Database connections
-│   └── cmd/               # CLI commands
-├── TODO.md               # Task tracking
-└── DOCUMENT.md           # This file
+├── deploy/                 # Database infrastructure (Docker + PostgreSQL)
+│   ├── docker-compose.yml  # Postgres 16 with profiling extensions
+│   ├── seed.sql            # Demo data with intentional slow queries
+│   ├── init/               # Database initialization scripts
+│   │   ├── 01-extensions.sql  # pg_stat_statements setup
+│   │   └── 02-roles.sql       # profiler_ro, profiler_sb roles
+│   ├── postgresql.conf     # Custom PostgreSQL configuration
+│   ├── Makefile           # Database operations (up/down/seed/connect)
+│   └── README.md          # Simple Docker setup guide
+├── cli/                   # Backend application (COMPLETE)
+│   ├── internal/          # Core modules (AI-enhanced)
+│   │   ├── ai/            # Azure OpenAI integration
+│   │   ├── ingest/        # pg_stat_statements collection
+│   │   ├── parse/         # Query normalization & fingerprinting
+│   │   ├── rules/         # AI + heuristic rule engine
+│   │   ├── recommend/     # Fallback recommendation templates
+│   │   ├── store/         # Data models with JSON support
+│   │   ├── db/            # Database connections with logging
+│   │   └── logger/        # [timestamp] [file:line] [level] logging
+│   ├── cmd/               # CLI commands (scan, bottlenecks)
+│   ├── main.go            # Entry point with .env support
+│   ├── go.mod/go.sum      # Dependencies (cobra, pq, godotenv)
+│   └── .env.example       # Environment template (blocked by gitignore)
+├── README.md              # Project overview and roadmap
+├── TODO.md               # Task tracking (TO BE UPDATED CONTINUOUSLY)
+├── DOCUMENT.md           # Team coordination (THIS FILE)
+└── ProblemStatement      # Original requirements
 ```
+
+**NOTE**: Removed duplicate `/internal/` folder outside `/cli/` - everything is now consolidated under `/cli/internal/`
 
 ### Performance Validation
 
@@ -253,4 +275,92 @@ OptiDB/
 3. **CLI integration** - Wire CLI commands to API calls
 4. **HTMX frontend** - Server-rendered UI as planned
 
-The backend data processing pipeline is complete and ready for integration. All core functionality for Day 1 tasks (ingest → parse → rules → recommend) is implemented and functional.
+## **COMPLETE SETUP GUIDE** (Easy Replication Steps)
+
+### **Prerequisites**
+
+- Docker & Docker Compose installed
+- Go 1.23+ installed
+- PostgreSQL client tools (optional, for manual testing)
+
+### **Step 1: Database Setup (2 minutes)**
+
+```bash
+cd deploy
+make down-clean  # Clean start
+make up          # Start PostgreSQL 16 with extensions
+make status      # Verify: database + extensions + roles
+make seed        # Load demo data with slow queries
+```
+
+### **Step 2: CLI Setup (1 minute)**
+
+```bash
+cd ../cli
+go build -o optidb  # Build CLI
+
+# Optional: Create .env file for AI features
+# cp .env.example .env  # (blocked by gitignore)
+# Edit .env with your Azure OpenAI credentials
+```
+
+### **Step 3: Test AI-Powered Analysis (30 seconds)**
+
+```bash
+# Test with AI (if .env configured)
+./optidb scan --min-duration 0.01 --top 5
+
+# Test detailed recommendations
+./optidb bottlenecks --limit 3
+
+# Check logs for AI API calls and token usage
+```
+
+### **Step 4: Verify Everything Works**
+
+Expected output should show:
+
+- ✅ Database connection established
+- ✅ AI-powered recommendations enabled (if configured)
+- ✅ 2-4 recommendations generated with confidence scores
+- ✅ DDL statements and plain English explanations
+- ✅ Real OpenAI API calls with token tracking
+
+### **Troubleshooting**
+
+- **Connection refused**: Run `brew services stop postgresql@14` to stop local PostgreSQL
+- **No slow queries**: Lower threshold with `--min-duration 0.001`
+- **AI disabled**: Check .env file or use without AI (falls back to heuristics)
+
+---
+
+## 📊 **PROJECT STATUS SUMMARY**
+
+### ✅ **COMPLETED (Day 1 + AI Enhancement)**
+
+- **Database Infrastructure**: PostgreSQL 16 + profiling extensions + roles
+- **Demo Data**: 4 tables, 100+ records, intentional performance bottlenecks
+- **AI Integration**: Azure OpenAI GPT-4.1 with structured prompts
+- **Backend Pipeline**: Complete ingest → parse → rules → recommend flow
+- **Advanced Logging**: Production-grade debugging with stack traces
+- **CLI Interface**: Working `scan` and `bottlenecks` commands
+- **Rule Engine**: 5 detection types (missing indexes, redundant indexes, correlated subqueries, cardinality issues, join optimization)
+
+### 🎯 **PERFORMANCE ACHIEVED**
+
+- **Query Analysis**: <100ms for 50 queries ✅
+- **AI Recommendations**: 1300-1400 tokens per query with 40-95% confidence ✅
+- **Database Scanning**: <2s for full analysis ✅
+- **Memory Usage**: <50MB for full dataset ✅
+- **Connection Management**: Robust role-based access ✅
+
+### 🚀 **READY FOR PERSON B**
+
+The backend data processing pipeline is **BATTLE-READY** and ready for HTTP API integration. All core functionality for Day 1 tasks (ingest → parse → rules → recommend) is implemented and functional with AI enhancement.
+
+**Integration Points Ready**:
+
+- `collector.GetSlowQueries()` → API endpoint data
+- `ruleEngine.AnalyzeQuery()` → AI recommendations
+- `store.Recommendation` → JSON API responses
+- Comprehensive logging → Production debugging

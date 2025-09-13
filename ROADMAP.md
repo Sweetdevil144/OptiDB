@@ -97,7 +97,7 @@
 
 #### 5–9h: Ingest & API foundation
 
-**Abhi**
+### **Abhi**
 
 - Define **scan query** parameters: `top`, `min_mean_ms`, exclude boilerplate statements.
 - Decide EXPLAIN sampling policy: _baseline for top-K only_ (K configurable; default 20).
@@ -106,7 +106,7 @@
 
 **Acceptance:** After one scan, meta has ≥20 queries with metrics and plan facts.
 
-**Dev**
+### **Dev**
 
 - Expose `GET /bottlenecks` and `GET /queries/:id` (payloads as above).
 - Render a **top list**: query preview, mean_ms, calls, “Reason (pending)” placeholder, “View”.
