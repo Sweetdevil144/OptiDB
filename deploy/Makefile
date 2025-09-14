@@ -1,7 +1,7 @@
 # OptiDB Makefile - Docker and Database Operations
 
 # Configuration
-DOCKER_COMPOSE = docker-compose
+DOCKER_COMPOSE = docker compose
 PROJECT_NAME = optidb
 POSTGRES_CONTAINER = optidb_postgres
 

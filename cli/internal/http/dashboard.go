@@ -97,7 +97,6 @@ func (h *Handlers) renderDashboardHTML() string {
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen" x-data="dashboard()">
     <div class="min-h-screen">
-        <!-- Modern Header -->
         <header class="gradient-bg shadow-2xl">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-6">
@@ -124,9 +123,7 @@ func (h *Handlers) renderDashboardHTML() string {
             </div>
         </header>
 
-        <!-- Main Content -->
         <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-            <!-- Stats Overview -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div class="metric-card">
                     <div class="flex items-center justify-between">
@@ -140,10 +137,10 @@ func (h *Handlers) renderDashboardHTML() string {
                 <div class="metric-card">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-green-600 text-sm font-medium">Slow Queries</p>
+                            <p class="text-orange-600 text-sm font-medium">Slow Queries</p>
                             <p class="text-3xl font-bold text-gray-900" id="slow-queries">-</p>
                         </div>
-                        <i class="fas fa-exclamation-triangle text-3xl text-green-500"></i>
+                        <i class="fas fa-exclamation-triangle text-3xl text-orange-500"></i>
                     </div>
                 </div>
                 <div class="metric-card">
@@ -166,7 +163,6 @@ func (h *Handlers) renderDashboardHTML() string {
                 </div>
             </div>
 
-            <!-- Filters & Controls -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
                 <div class="flex flex-wrap items-center gap-6">
                     <div class="flex-1 min-w-64">
@@ -207,7 +203,6 @@ func (h *Handlers) renderDashboardHTML() string {
                 </div>
             </div>
 
-            <!-- Bottlenecks Section -->
             <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
                 <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
                     <div class="flex items-center justify-between">
@@ -238,7 +233,6 @@ func (h *Handlers) renderDashboardHTML() string {
                     </div>
                 </div>
                 
-                <!-- Loading State -->
                 <div x-show="loading" class="flex justify-center items-center py-16">
                     <div class="text-center">
                         <div class="loading-spinner mx-auto mb-4"></div>
@@ -247,7 +241,6 @@ func (h *Handlers) renderDashboardHTML() string {
                     </div>
                 </div>
 
-                <!-- Content Area -->
                 <div id="bottlenecks-content" 
                      hx-get="/api/v1/bottlenecks?limit=10&min_duration=0.1" 
                      hx-trigger="load"
@@ -375,10 +368,10 @@ func (h *Handlers) GetBottlenecksTable(c *fiber.Ctx) error {
 	if err != nil {
 		logger.LogErrorf("Failed to get slow queries: %v", err)
 		return c.SendString(`<div class="text-center py-16 text-red-600">
-			<i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
-			<p class="text-xl font-semibold">Error loading bottlenecks</p>
-			<p class="text-gray-500">Please try refreshing the page</p>
-		</div>`)
+            <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+            <p class="text-xl font-semibold">Error loading bottlenecks</p>
+            <p class="text-gray-500">Please try refreshing the page</p>
+        </div>`)
 	}
 
 	// Get metadata
@@ -386,18 +379,18 @@ func (h *Handlers) GetBottlenecksTable(c *fiber.Ctx) error {
 	if err != nil {
 		logger.LogErrorf("Failed to get table info: %v", err)
 		return c.SendString(`<div class="text-center py-16 text-red-600">
-			<i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
-			<p class="text-xl font-semibold">Error loading table information</p>
-		</div>`)
+            <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+            <p class="text-xl font-semibold">Error loading table information</p>
+        </div>`)
 	}
 
 	indexes, err := h.collector.GetIndexInfo()
 	if err != nil {
 		logger.LogErrorf("Failed to get index info: %v", err)
 		return c.SendString(`<div class="text-center py-16 text-red-600">
-			<i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
-			<p class="text-xl font-semibold">Error loading index information</p>
-		</div>`)
+            <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+            <p class="text-xl font-semibold">Error loading index information</p>
+        </div>`)
 	}
 
 	// Generate HTML content
@@ -405,10 +398,10 @@ func (h *Handlers) GetBottlenecksTable(c *fiber.Ctx) error {
 
 	if len(queryStats) == 0 {
 		html += `<div class="text-center py-16">
-			<i class="fas fa-check-circle text-6xl text-green-500 mb-4"></i>
-			<h3 class="text-2xl font-bold text-gray-900 mb-2">No Bottlenecks Found</h3>
-			<p class="text-gray-600">Your database is performing well! No slow queries detected.</p>
-		</div>`
+            <i class="fas fa-check-circle text-6xl text-green-500 mb-4"></i>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">No Bottlenecks Found</h3>
+            <p class="text-gray-600">Your database is performing well! No slow queries detected.</p>
+        </div>`
 	} else {
 		// Cards View
 		html += `<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">`
@@ -454,71 +447,68 @@ func (h *Handlers) GetBottlenecksTable(c *fiber.Ctx) error {
 			performanceScore := h.calculatePerformanceScore(query, planFacts)
 
 			html += `<div class="query-card p-6" data-query="true">
-				<div class="flex items-start justify-between mb-4">
-					<div class="flex-1">
-						<div class="flex items-center space-x-2 mb-2">
-							<span class="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded">ID: ` + queryID + `</span>
-							<div class="flex items-center space-x-1">
-								<span class="text-sm font-medium text-gray-600">Performance:</span>
-								<span class="text-sm font-bold ` + h.getPerformanceColor(performanceScore) + `">` + strconv.Itoa(performanceScore) + `%</span>
-							</div>
-						</div>
-						<div class="bg-gray-50 rounded-lg p-3 mb-4">
-							<code class="text-sm text-gray-800 font-mono break-all">` + displayQuery + `</code>
-						</div>
-					</div>
-				</div>
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2 mb-2">
+                            <span class="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded">ID: ` + queryID + `</span>
+                            <div class="flex items-center space-x-1">
+                                <span class="text-sm font-medium text-gray-600">Performance:</span>
+                                <span class="text-sm font-bold ` + h.getPerformanceColor(performanceScore) + `">` + strconv.Itoa(performanceScore) + `%</span>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                            <code class="text-sm text-gray-800 font-mono break-all">` + displayQuery + `</code>
+                        </div>
+                    </div>
+                </div>
 
-				<!-- Stats Row -->
-				<div class="grid grid-cols-2 gap-4 mb-4">
-					<div class="text-center">
-						<div class="text-2xl font-bold text-blue-600" data-time="` + strconv.FormatFloat(query.MeanExecTime, 'f', 2, 64) + `">` + strconv.FormatFloat(query.MeanExecTime, 'f', 2, 64) + `ms</div>
-						<div class="text-xs text-gray-500">Avg Time</div>
-					</div>
-					<div class="text-center">
-						<div class="text-2xl font-bold text-green-600">` + strconv.FormatInt(query.Calls, 10) + `</div>
-						<div class="text-xs text-gray-500">Calls</div>
-					</div>
-				</div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600" data-time="` + strconv.FormatFloat(query.MeanExecTime, 'f', 2, 64) + `">` + strconv.FormatFloat(query.MeanExecTime, 'f', 2, 64) + `ms</div>
+                        <div class="text-xs text-gray-500">Avg Time</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600">` + strconv.FormatInt(query.Calls, 10) + `</div>
+                        <div class="text-xs text-gray-500">Calls</div>
+                    </div>
+                </div>
 
-				<!-- Plan Facts -->
-				<div class="mb-4">
-					<div class="flex flex-wrap gap-2">`
+                <div class="mb-4">
+                    <div class="flex flex-wrap gap-2">`
 
 			// Plan facts chips
 			if planFacts.HasSeqScan {
 				html += `<span class="plan-fact-chip seq-scan">
-					<i class="fas fa-search mr-1"></i>Seq Scan
-				</span>`
+                    <i class="fas fa-search mr-1"></i>Seq Scan
+                </span>`
 			}
 			if planFacts.HasIndexScan {
 				html += `<span class="plan-fact-chip index-scan">
-					<i class="fas fa-database mr-1"></i>Index Scan
-				</span>`
+                    <i class="fas fa-database mr-1"></i>Index Scan
+                </span>`
 			}
 			html += `<span class="plan-fact-chip bg-blue-100 text-blue-800">
-				<i class="fas fa-chart-line mr-1"></i>Est: ` + strconv.FormatInt(planFacts.EstimatedRows, 10) + `
-			</span>`
+                <i class="fas fa-chart-line mr-1"></i>Est: ` + strconv.FormatInt(planFacts.EstimatedRows, 10) + `
+            </span>`
 			html += `<span class="plan-fact-chip bg-purple-100 text-purple-800">
-				<i class="fas fa-chart-bar mr-1"></i>Act: ` + strconv.FormatInt(planFacts.ActualRows, 10) + `
-			</span>`
+                <i class="fas fa-chart-bar mr-1"></i>Act: ` + strconv.FormatInt(planFacts.ActualRows, 10) + `
+            </span>`
 
 			html += `</div>
-				</div>
+                </div>
 
-				<!-- Recommendations -->
-				<div class="mb-4">
-					<div class="flex items-center justify-between mb-2">
-						<span class="text-sm font-semibold text-gray-700">Recommendations</span>
-						<span class="text-xs text-gray-500">` + strconv.Itoa(len(recommendations)) + ` found</span>
-					</div>`
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-semibold text-gray-700">Recommendations</span>
+                        <span class="text-xs text-gray-500">` + strconv.Itoa(len(recommendations)) + ` found</span>
+                    </div>`
 
 			// Show recommendations
 			for j, rec := range recommendations {
 				if j >= 3 { // Show only first 3
 					html += `<div class="text-xs text-gray-500 text-center py-2">
-						+` + strconv.Itoa(len(recommendations)-3) + ` more recommendations...
-					</div>`
+                        +` + strconv.Itoa(len(recommendations)-3) + ` more recommendations...
+                    </div>`
 					break
 				}
 
@@ -530,31 +520,30 @@ func (h *Handlers) GetBottlenecksTable(c *fiber.Ctx) error {
 				}
 
 				html += `<div class="recommendation-item bg-gray-50 rounded-lg p-3 mb-2">
-					<div class="flex items-center justify-between mb-1">
-						<span class="text-sm font-medium text-gray-800">` + rec.Type + `</span>
-						<span class="plan-fact-chip ` + confidenceClass + ` text-xs">
-							` + strconv.FormatFloat(rec.Confidence*100, 'f', 0, 64) + `%
-						</span>
-					</div>
-					<p class="text-xs text-gray-600">` + rec.Rationale + `</p>
-				</div>`
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium text-gray-800">` + rec.Type + `</span>
+                        <span class="plan-fact-chip ` + confidenceClass + ` text-xs">
+                            ` + strconv.FormatFloat(rec.Confidence*100, 'f', 0, 64) + `%
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-600">` + rec.Rationale + `</p>
+                </div>`
 			}
 
 			html += `</div>
 
-				<!-- Actions -->
-				<div class="flex space-x-2">
-					<button onclick="viewQueryDetail('` + queryID + `')" 
-							class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2">
-						<i class="fas fa-eye"></i>
-						<span>View Details</span>
-					</button>
-					<button onclick="copyToClipboard('` + queryID + `')" 
-							class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors duration-200">
-						<i class="fas fa-copy"></i>
-					</button>
-				</div>
-			</div>`
+                <div class="flex space-x-2">
+                    <button onclick="viewQueryDetail('` + queryID + `')" 
+                            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2">
+                        <i class="fas fa-eye"></i>
+                        <span>View Details</span>
+                    </button>
+                    <button onclick="copyToClipboard('` + queryID + `')" 
+                            class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors duration-200">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>`
 		}
 
 		html += `</div>`
@@ -564,8 +553,8 @@ func (h *Handlers) GetBottlenecksTable(c *fiber.Ctx) error {
 
 	// Update count
 	html += `<script>
-		document.getElementById('bottleneck-count').textContent = '` + strconv.Itoa(len(queryStats)) + ` bottlenecks found';
-	</script>`
+        document.getElementById('bottleneck-count').textContent = '` + strconv.Itoa(len(queryStats)) + ` bottlenecks found';
+    </script>`
 
 	c.Set("Content-Type", "text/html")
 	return c.SendString(html)
