@@ -133,6 +133,15 @@
 - **Production Ready**: Real API calls with token tracking and error handling
 - **Status**: ✅ LIVE - Generating intelligent recommendations with 40-95% confidence
 
+#### 🌐 Modern Web Dashboard - COMPLETED
+
+- **Modern UI**: Gradient backgrounds, glass effects, and smooth animations
+- **Interactive Features**: Real-time filtering, view switching, export functionality
+- **Performance Metrics**: Live stats dashboard with query performance scoring
+- **Responsive Design**: Works perfectly on desktop, tablet, and mobile
+- **HTMX Integration**: Seamless server-side rendering with dynamic updates
+- **Status**: ✅ PRODUCTION READY - Modern, professional dashboard
+
 #### 📋 Ready for Integration (Person B)
 
 - ✅ All backend modules are functional and AI-enhanced
@@ -145,7 +154,6 @@
 ### Data Interfaces for Person B
 
 #### Available Data Sources
-
 ```go
 // From ingest.StatsCollector
 func GetQueryStats() ([]store.QueryStats, error)
@@ -169,13 +177,27 @@ func NormalizeQuery(query string) string
 - `Recommendation` - Generated optimization suggestions
 - All structs have JSON tags for API responses
 
-#### Recommended API Endpoints
+#### Complete API Endpoints (All CLI Features Exposed)
 
 ```bash
-GET /bottlenecks?limit=10          # Top slow queries with recommendations
-GET /queries/:id                   # Detailed query analysis
-GET /recommendations?query_id=X    # Recommendations for specific query
-POST /scan                         # Trigger new analysis
+# Core Analysis (matching CLI commands)
+GET /api/v1/scan                   # CLI: optidb scan - Query performance analysis
+GET /api/v1/bottlenecks            # CLI: optidb bottlenecks - Detailed recommendations
+GET /api/v1/queries/:id            # Query detail analysis with full recommendations
+
+# System Monitoring
+GET /api/v1/status                 # System overview (database, tables, indexes, AI status)
+GET /api/v1/health                 # Health check with version info
+
+# Web Interface
+GET /                              # Modern dashboard (main interface)
+GET /dashboard                     # Dashboard (alias)
+GET /docs                          # API documentation
+
+# Parameters
+?limit=10-50                       # Number of results to return
+?min_duration=0.1                  # Minimum query duration in ms
+?type=missing_index                # Filter by analysis type
 ```
 
 ### Development Environment
@@ -207,9 +229,9 @@ go build -o optidb
 ./optidb bottlenecks --limit 5
 ```
 
-### File Structure (CLEANED UP)
+### File Structure (CLEANED UP + WEB DASHBOARD)
 
-```
+```bash
 OptiDB/
 ├── deploy/                 # Database infrastructure (Docker + PostgreSQL)
 │   ├── docker-compose.yml  # Postgres 16 with profiling extensions
@@ -220,7 +242,7 @@ OptiDB/
 │   ├── postgresql.conf     # Custom PostgreSQL configuration
 │   ├── Makefile           # Database operations (up/down/seed/connect)
 │   └── README.md          # Simple Docker setup guide
-├── cli/                   # Backend application (COMPLETE)
+├── cli/                   # Backend application + Web Dashboard (COMPLETE)
 │   ├── internal/          # Core modules (AI-enhanced)
 │   │   ├── ai/            # Azure OpenAI integration
 │   │   ├── ingest/        # pg_stat_statements collection
@@ -229,10 +251,14 @@ OptiDB/
 │   │   ├── recommend/     # Fallback recommendation templates
 │   │   ├── store/         # Data models with JSON support
 │   │   ├── db/            # Database connections with logging
-│   │   └── logger/        # [timestamp] [file:line] [level] logging
-│   ├── cmd/               # CLI commands (scan, bottlenecks)
+│   │   ├── logger/        # [timestamp] [file:line] [level] logging
+│   │   └── http/          # 🌐 Modern Web Dashboard + REST API
+│   │       ├── handlers.go    # API endpoints + DTOs
+│   │       ├── server.go      # Fiber web server setup
+│   │       └── dashboard.go   # Modern HTMX dashboard
+│   ├── cmd/               # CLI commands (scan, bottlenecks, serve)
 │   ├── main.go            # Entry point with .env support
-│   ├── go.mod/go.sum      # Dependencies (cobra, pq, godotenv)
+│   ├── go.mod/go.sum      # Dependencies (cobra, pq, godotenv, fiber)
 │   └── .env.example       # Environment template (blocked by gitignore)
 ├── README.md              # Project overview and roadmap
 ├── TODO.md               # Task tracking (TO BE UPDATED CONTINUOUSLY)
@@ -336,15 +362,18 @@ Expected output should show:
 
 ## 📊 **PROJECT STATUS SUMMARY**
 
-### ✅ **COMPLETED (Day 1 + AI Enhancement)**
+### ✅ **COMPLETED (Day 1 + AI Enhancement + Modern Web Dashboard)**
 
 - **Database Infrastructure**: PostgreSQL 16 + profiling extensions + roles
 - **Demo Data**: 4 tables, 100+ records, intentional performance bottlenecks
 - **AI Integration**: Azure OpenAI GPT-4.1 with structured prompts
 - **Backend Pipeline**: Complete ingest → parse → rules → recommend flow
 - **Advanced Logging**: Production-grade debugging with stack traces
-- **CLI Interface**: Working `scan` and `bottlenecks` commands
+- **CLI Interface**: Working `scan`, `bottlenecks`, and `serve` commands
 - **Rule Engine**: 5 detection types (missing indexes, redundant indexes, correlated subqueries, cardinality issues, join optimization)
+- **🌐 Modern Web Dashboard**: Gradient UI, real-time filtering, performance scoring, export functionality
+- **🔗 Complete REST API**: All CLI features exposed via HTTP endpoints
+- **📊 System Monitoring**: Database status, table/index metrics, AI status tracking
 
 ### 🎯 **PERFORMANCE ACHIEVED**
 
@@ -364,3 +393,32 @@ The backend data processing pipeline is **BATTLE-READY** and ready for HTTP API 
 - `ruleEngine.AnalyzeQuery()` → AI recommendations
 - `store.Recommendation` → JSON API responses
 - Comprehensive logging → Production debugging
+Navigate to: [http://localhost:8090](http://localhost:8090)
+
+### 2. What You'll See
+
+- **Modern Dashboard**: Beautiful gradient UI with real-time performance metrics
+- **Interactive Features**: Filtering, view switching, export functionality
+- **Live Data**: Real-time bottleneck analysis from your seeded database
+
+### 3. Available Pages
+
+#### **Main Dashboard**
+- **URL**: [http://localhost:8090/](http://localhost:8090/) or [http://localhost:8090/dashboard](http://localhost:8090/dashboard)
+- **Features**:
+  - Performance metrics overview
+  - Interactive bottleneck cards
+  - Real-time filtering
+  - Export functionality
+
+#### **API Endpoints (for developers)**
+- **Health Check**: [http://localhost:8090/api/v1/health](http://localhost:8090/api/v1/health)
+- **System Status**: [http://localhost:8090/api/v1/status](http://localhost:8090/api/v1/status)
+- **Bottlenecks**: [http://localhost:8090/api/v1/bottlenecks](http://localhost:8090/api/v1/bottlenecks)
+- **Scan Results**: [http://localhost:8090/api/v1/scan](http://localhost:8090/api/v1/scan)
+- **API Docs**: [http://localhost:8090/docs](http://localhost:8090/docs)
+
+### 4. Quick Test Commands
+
+You can also test the API directly:
+

@@ -1,26 +1,39 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"cli/internal/http"
+	"cli/internal/logger"
 
 	"github.com/spf13/cobra"
+)
+
+var (
+	port string
 )
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Start the OptiDB web server with dashboard",
+	Long: `Start the OptiDB web server with a real-time dashboard for database performance analysis.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Features:
+- Real-time bottleneck monitoring
+- Interactive HTMX dashboard
+- REST API endpoints for integration
+- Query detail analysis
+- AI-powered recommendations
+
+Examples:
+  optidb serve --port 8090
+  optidb serve --port 3000`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("serve called")
+		runServe()
 	},
 }
 
@@ -33,17 +46,42 @@ var initCmd = &cobra.Command{
 	},
 }
 
+func runServe() {
+	logger.LogInfo("Starting OptiDB web server")
+
+	// Create server
+	server := http.NewServer()
+	if server == nil {
+		logger.LogError("Failed to create web server")
+		os.Exit(1)
+	}
+
+	// Setup graceful shutdown
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-c
+		logger.LogInfo("Shutting down server...")
+		server.Stop()
+		os.Exit(0)
+	}()
+
+	// Start server
+	fmt.Printf("🚀 OptiDB Web Server starting on port %s\n", port)
+	fmt.Printf("📊 Dashboard: http://localhost:%s\n", port)
+	fmt.Printf("🔗 API: http://localhost:%s/api/v1\n", port)
+	fmt.Printf("💡 Press Ctrl+C to stop\n\n")
+
+	if err := server.Start(port); err != nil {
+		logger.LogErrorf("Failed to start server: %v", err)
+		os.Exit(1)
+	}
+}
+
 func init() {
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(initCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// serveCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// serveCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	serveCmd.Flags().StringVar(&port, "port", "8090", "Port to run the web server on")
 }
