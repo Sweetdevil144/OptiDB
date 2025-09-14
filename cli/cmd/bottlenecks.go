@@ -30,7 +30,12 @@ This command shows:
 - Plain English explanations
 - Confidence scores and risk levels`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// applyBottleneckId, _ := cmd.Flags().GetString("apply")
+		// if applyBottleneckId!=""{
+
+		// }else{
 		runBottlenecks()
+		// }
 	},
 }
 
@@ -89,6 +94,7 @@ func runBottlenecks() {
 	// Analyze and display bottlenecks
 	logger.LogInfof("Analyzing %d queries for bottlenecks (limit: %d)", len(queryStats), limit)
 	count := 0
+	ddlBottlenecks := map[int]string{}
 	for _, query := range queryStats {
 		if count >= limit {
 			break
@@ -135,6 +141,7 @@ func runBottlenecks() {
 			if rec.DDL != "" && showDDL {
 				fmt.Printf("      🔧 DDL:\n")
 				fmt.Printf("         %s\n", rec.DDL)
+				ddlBottlenecks[i+1] = rec.DDL
 			}
 
 			if rec.RewriteSQL != "" {
@@ -159,8 +166,37 @@ func runBottlenecks() {
 		logger.LogInfof("Bottlenecks analysis complete: found %d bottlenecks", count)
 		fmt.Printf("\n\n📋 Summary: Found %d bottlenecks with optimization opportunities\n", count)
 		fmt.Printf("💡 Use --ddl=false to hide DDL statements\n")
-		fmt.Printf("🔧 Use --limit=N to show more/fewer results\n")
+		fmt.Printf("🔧 Use --limit=N to show more/fewer results\n\n")
+
+		if len(ddlBottlenecks) != 0 {
+			fmt.Println("Would you like to apply a DDL bottleneck?")
+			bottleneckID := -1
+			for bottleneckID != 0 {
+				fmt.Println("Enter bottleneck ID to apply, 0 to exit")
+				fmt.Scanln(&bottleneckID)
+				if bottleneckID == 0 {
+					break
+				}
+
+				ddlCommand, exists := ddlBottlenecks[bottleneckID]
+				if exists {
+					fmt.Printf("Applying bottleneck fix #%d\n", bottleneckID)
+					_, err := database.Exec(ddlCommand)
+					if err != nil {
+						fmt.Println("Failed to apply bottleneck fix")
+						fmt.Println(err.Error())
+					} else {
+						fmt.Println("Bottleneck fix applied successfully")
+					}
+				} else {
+					fmt.Println("Invalid bottleneck ID")
+				}
+
+			}
+		}
+
 	}
+
 }
 
 func min(a, b int) int {
