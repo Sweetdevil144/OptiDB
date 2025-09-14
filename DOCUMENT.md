@@ -154,6 +154,7 @@
 ### Data Interfaces for Person B
 
 #### Available Data Sources
+
 ```go
 // From ingest.StatsCollector
 func GetQueryStats() ([]store.QueryStats, error)
@@ -393,7 +394,7 @@ The backend data processing pipeline is **BATTLE-READY** and ready for HTTP API 
 - `ruleEngine.AnalyzeQuery()` → AI recommendations
 - `store.Recommendation` → JSON API responses
 - Comprehensive logging → Production debugging
-Navigate to: [http://localhost:8090](http://localhost:8090)
+  Navigate to: [http://localhost:8090](http://localhost:8090)
 
 ### 2. What You'll See
 
@@ -404,6 +405,7 @@ Navigate to: [http://localhost:8090](http://localhost:8090)
 ### 3. Available Pages
 
 #### **Main Dashboard**
+
 - **URL**: [http://localhost:8090/](http://localhost:8090/) or [http://localhost:8090/dashboard](http://localhost:8090/dashboard)
 - **Features**:
   - Performance metrics overview
@@ -412,6 +414,7 @@ Navigate to: [http://localhost:8090](http://localhost:8090)
   - Export functionality
 
 #### **API Endpoints (for developers)**
+
 - **Health Check**: [http://localhost:8090/api/v1/health](http://localhost:8090/api/v1/health)
 - **System Status**: [http://localhost:8090/api/v1/status](http://localhost:8090/api/v1/status)
 - **Bottlenecks**: [http://localhost:8090/api/v1/bottlenecks](http://localhost:8090/api/v1/bottlenecks)
@@ -422,3 +425,18 @@ Navigate to: [http://localhost:8090](http://localhost:8090)
 
 You can also test the API directly:
 
+```bash
+# Test health endpoint
+curl http://localhost:8090/api/v1/health
+
+# Get system status
+curl http://localhost:8090/api/v1/status
+
+# Get bottlenecks (JSON)
+curl http://localhost:8090/api/v1/bottlenecks?limit=5
+
+# Get scan results (JSON)
+curl http://localhost:8090/api/v1/scan?limit=10
+```
+
+---
